@@ -20,6 +20,7 @@
   </style>
 </head>
 <body>
+  <!-- Login Form -->
   <div id="loginForm">
     <h2>Connexion sécurisée</h2>
     <input type="text" id="username" placeholder="Nom d'utilisateur"><br>
@@ -27,18 +28,23 @@
     <button onclick="login()">Se connecter</button>
     <p id="errorMsg" style="color: red;"></p>
   </div>
+
+  <!-- Commande Interface -->
   <div id="controlPanel" class="hidden">
     <h2>Station Smart Farming - ESP32</h2>
-    <button onclick="sendCmd('pompe','ON')">🚿 Activer Pompe</button>
-    <button onclick="sendCmd('pompe','OFF')">🛑 Désactiver Pompe</button><br><br>
-    <button onclick="sendCmd('buzzer','ON')">🔔 Activer Buzzer</button>
-    <button onclick="sendCmd('buzzer','OFF')">🔕 Désactiver Buzzer</button>
+    <button onclick="sendCmd('pompe', 'ON')">🚿 Activer Pompe</button>
+    <button onclick="sendCmd('pompe', 'OFF')">🛑 Désactiver Pompe</button><br><br>
+    <button onclick="sendCmd('buzzer', 'ON')">🔔 Activer Buzzer</button>
+    <button onclick="sendCmd('buzzer', 'OFF')">🔕 Désactiver Buzzer</button>
     <br><br>
     <button onclick="logout()">🔒 Se déconnecter</button>
   </div>
+
   <script>
     const validUsername = "admin";
     const validPassword = "esp32pass";
+
+    // Fonction de connexion
     function login() {
       const user = document.getElementById("username").value;
       const pass = document.getElementById("password").value;
@@ -49,18 +55,37 @@
         document.getElementById("errorMsg").innerText = "Identifiants incorrects !";
       }
     }
+
+    // Fonction de déconnexion
     function logout() {
       document.getElementById("controlPanel").classList.add("hidden");
       document.getElementById("loginForm").classList.remove("hidden");
     }
+
+    // Fonction d'envoi de la commande à l'ESP32
     async function sendCmd(component, value) {
-      const response = await fetch('/api/commandes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [component]: value })
-      });
-      const result = await response.json();
-      alert("✅ Commande : " + JSON.stringify(result.state));
+      try {
+        const response = await fetch('/api/commandes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [component]: value })
+        });
+
+        if (!response.ok) {
+          throw new Error('Erreur dans la commande');
+        }
+
+        const result = await response.json();
+
+        // Vérifier si la réponse contient l'état de la commande
+        if (result && result.state) {
+          alert("✅ Commande envoyée avec succès : " + JSON.stringify(result.state));
+        } else {
+          alert("❌ Erreur : L'état de la commande est introuvable.");
+        }
+      } catch (error) {
+        alert("❌ Une erreur est survenue : " + error.message);
+      }
     }
   </script>
 </body>
