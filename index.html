@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Smart Farming - ESP32</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 40px;
+    }
+    .hidden {
+      display: none;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div id="loginForm">
+    <h2>Connexion sécurisée</h2>
+    <input type="text" id="username" placeholder="Nom d'utilisateur"><br>
+    <input type="password" id="password" placeholder="Mot de passe"><br>
+    <button onclick="login()">Se connecter</button>
+    <p id="errorMsg" style="color: red;"></p>
+  </div>
+  <div id="controlPanel" class="hidden">
+    <h2>Station Smart Farming - ESP32</h2>
+    <button onclick="sendCmd('pompe','ON')">🚿 Activer Pompe</button>
+    <button onclick="sendCmd('pompe','OFF')">🛑 Désactiver Pompe</button><br><br>
+    <button onclick="sendCmd('buzzer','ON')">🔔 Activer Buzzer</button>
+    <button onclick="sendCmd('buzzer','OFF')">🔕 Désactiver Buzzer</button>
+    <br><br>
+    <button onclick="logout()">🔒 Se déconnecter</button>
+  </div>
+  <script>
+    const validUsername = "admin";
+    const validPassword = "esp32pass";
+    function login() {
+      const user = document.getElementById("username").value;
+      const pass = document.getElementById("password").value;
+      if (user === validUsername && pass === validPassword) {
+        document.getElementById("loginForm").classList.add("hidden");
+        document.getElementById("controlPanel").classList.remove("hidden");
+      } else {
+        document.getElementById("errorMsg").innerText = "Identifiants incorrects !";
+      }
+    }
+    function logout() {
+      document.getElementById("controlPanel").classList.add("hidden");
+      document.getElementById("loginForm").classList.remove("hidden");
+    }
+    async function sendCmd(component, value) {
+      const response = await fetch('/api/commandes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [component]: value })
+      });
+      const result = await response.json();
+      alert("✅ Commande : " + JSON.stringify(result.state));
+    }
+  </script>
+</body>
+</html>
