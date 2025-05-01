@@ -1,94 +1,92 @@
-from machine import Pin, ADC, PWM
-import onewire, ds18x20
-import time
-import urequests
-import network
-from lcd_api import LcdApi
-from i2c_lcd import I2cLcd
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Smart Farming - ESP32</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 40px;
+    }
+    .hidden {
+      display: none;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Form -->
+  <div id="loginForm">
+    <h2>Connexion sécurisée</h2>
+    <input type="text" id="username" placeholder="Nom d'utilisateur"><br>
+    <input type="password" id="password" placeholder="Mot de passe"><br>
+    <button onclick="login()">Se connecter</button>
+    <p id="errorMsg" style="color: red;"></p>
+  </div>
 
-# --- Connexion Wi-Fi
-sta_if = network.WLAN(network.STA_IF)
-sta_if.active(True)
-sta_if.connect("itel A56")  # Remplacer par votre SSID
-print("Connexion au Wi-Fi...")
-while not sta_if.isconnected():
-    time.sleep(1)
-print("✅ Connecté ! IP :", sta_if.ifconfig()[0])
+  <!-- Commande Interface -->
+  <div id="controlPanel" class="hidden">
+    <h2>Station Smart Farming - ESP32</h2>
+    <button onclick="sendCmd('pompe', 'ON')">🚿 Activer Pompe</button>
+    <button onclick="sendCmd('pompe', 'OFF')">🛑 Désactiver Pompe</button><br><br>
+    <button onclick="sendCmd('buzzer', 'ON')">🔔 Activer Buzzer</button>
+    <button onclick="sendCmd('buzzer', 'OFF')">🔕 Désactiver Buzzer</button>
+    <br><br>
+    <button onclick="logout()">🔒 Se déconnecter</button>
+  </div>
 
-# --- Capteurs
-ds_pin = Pin(4)
-ow = onewire.OneWire(ds_pin)
-ds = ds18x20.DS18X20(ow)
-roms = ds.scan()
+  <script>
+    const validUsername = "admin";
+    const validPassword = "esp32pass";
 
-pin_yl69 = ADC(Pin(35))
-pin_yl69.atten(ADC.ATTN_11DB)
+    // Fonction de connexion
+    function login() {
+      const user = document.getElementById("username").value;
+      const pass = document.getElementById("password").value;
+      if (user === validUsername && pass === validPassword) {
+        document.getElementById("loginForm").classList.add("hidden");
+        document.getElementById("controlPanel").classList.remove("hidden");
+      } else {
+        document.getElementById("errorMsg").innerText = "Identifiants incorrects !";
+      }
+    }
 
-# --- Sorties
-led_verte1 = Pin(32, Pin.OUT)
-led_verte2 = Pin(33, Pin.OUT)
-led_rouge1 = Pin(25, Pin.OUT)
-led_rouge2 = Pin(26, Pin.OUT)
-buzzer = PWM(Pin(27))
-relais = Pin(23, Pin.OUT)
+    // Fonction de déconnexion
+    function logout() {
+      document.getElementById("controlPanel").classList.add("hidden");
+      document.getElementById("loginForm").classList.remove("hidden");
+    }
 
-# --- LCD
-i2c = I2C(0, scl=Pin(22), sda=Pin(21))
-lcd = I2cLcd(i2c, 0x27, 2, 16)
+    // Fonction d'envoi de la commande à l'ESP32
+    async function sendCmd(component, value) {
+      try {
+        const response = await fetch('https://esp32-api-verceltest.vercel.app/api/commandes', {  // URL de votre API Vercel
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [component]: value })
+        });
 
-# --- Fonctions
-def get_temperature():
-    if not roms:
-        return -999
-    ds.convert_temp()
-    time.sleep_ms(750)
-    return round(ds.read_temp(roms[0]), 1)
+        if (!response.ok) {
+          throw new Error('Erreur dans la commande');
+        }
 
-def get_humidite():
-    value = pin_yl69.read()
-    pourcentage = (value * 100) / 4095
-    return round(pourcentage, 1)
+        const result = await response.json();
 
-def activer_buzzer():
-    buzzer.freq(1000)
-    buzzer.duty(512)
-
-def couper_buzzer():
-    buzzer.duty(0)
-
-# --- Boucle principale
-while True:
-    temp = get_temperature()
-    hum = get_humidite()
-
-    lcd.clear()
-    lcd.putstr("Smart Farming")
-    lcd.move_to(0, 1)
-    lcd.putstr("H:{:.1f}% T:{:.1f}C".format(hum, temp))
-
-    try:
-        r = urequests.get("https://esp32-api-verceltest.vercel.app/api/commandes", timeout=10)
-        if r.status_code == 200:
-            commandes = r.json()
-            r.close()
-
-            if commandes.get("pompe") == "ON":
-                relais.on()
-                print("🚿 Pompe activée à distance")
-            else:
-                relais.off()
-                print("🛑 Pompe désactivée")
-
-            if commandes.get("buzzer") == "ON":
-                activer_buzzer()
-                print("🔔 Buzzer activé à distance")
-            else:
-                couper_buzzer()
-                print("🔕 Buzzer désactivé")
-        else:
-            print(f"❌ Erreur HTTP : {r.status_code}")
-
-    except OSError as e:
-        print(f"❌ Erreur de connexion : {e}")
-
-    time.sleep(10)  # pause de 10 secondes avant la prochaine lecture
+        // Vérifier si la réponse contient l'état de la commande
+        if (result && result.state) {
+          alert("✅ Commande envoyée avec succès : " + JSON.stringify(result.state));
+        } else {
+          alert("❌ Erreur : L'état de la commande est introuvable.");
+        }
+      } catch (error) {
+        alert("❌ Une erreur est survenue : " + error.message);
+      }
+    }
+  </script>
+</body>
+</html>
