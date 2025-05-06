@@ -2,90 +2,118 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Smart Farming - ESP32</title>
+  <title>Smart Farming - Contrôle</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body, html {
+      height: 100%;
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden;
+    }
+
+    /* 🎬 Vidéo de fond */
+    #bgVideo {
+      position: fixed;
+      top: 0;
+      left: 0;
+      min-width: 100%;
+      min-height: 100%;
+      z-index: -1;
+      object-fit: cover;
+    }
+
+    .overlay {
+      background-color: rgba(255,255,255,0.9);
+      max-width: 500px;
+      margin: 80px auto;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.2);
       text-align: center;
-      margin-top: 40px;
     }
-    .hidden {
-      display: none;
-    }
+
     input, button {
-      padding: 10px;
-      margin: 5px;
+      padding: 12px;
+      margin: 10px 5px;
       font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
     }
+
+    button {
+      background-color: #28a745;
+      color: white;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background-color: #218838;
+    }
+
+    .hidden { display: none; }
   </style>
 </head>
 <body>
-  <!-- Login Form -->
-  <div id="loginForm">
-    <h2>Connexion sécurisée</h2>
-    <input type="text" id="username" placeholder="Nom d'utilisateur"><br>
-    <input type="password" id="password" placeholder="Mot de passe"><br>
-    <button onclick="login()">Se connecter</button>
-    <p id="errorMsg" style="color: red;"></p>
-  </div>
 
-  <!-- Commande Interface -->
-  <div id="controlPanel" class="hidden">
-    <h2>Station Smart Farming - ESP32</h2>
-    <button onclick="sendCmd('pompe', 'ON')">🚿 Activer Pompe</button>
-    <button onclick="sendCmd('pompe', 'OFF')">🛑 Désactiver Pompe</button><br><br>
-    <button onclick="sendCmd('buzzer', 'ON')">🔔 Activer Buzzer</button>
-    <button onclick="sendCmd('buzzer', 'OFF')">🔕 Désactiver Buzzer</button>
-    <br><br>
-    <button onclick="logout()">🔒 Se déconnecter</button>
+  <!-- 🎥 Vidéo de fond -->
+  <video autoplay muted loop id="bgVideo">
+    <source src="champ.mp4" type="video/mp4">
+    Votre navigateur ne supporte pas les vidéos HTML5.
+  </video>
+
+  <div class="overlay">
+    <div id="loginForm">
+      <h2>🔐 Connexion - Smart Farming</h2>
+      <input type="text" id="username" placeholder="Nom d'utilisateur"><br>
+      <input type="password" id="password" placeholder="Mot de passe"><br>
+      <button onclick="login()">Se connecter</button>
+      <p id="errorMsg" style="color: red;"></p>
+    </div>
+
+    <div id="controlPanel" class="hidden">
+      <h2>🌱 Tableau de bord</h2>
+      <button onclick="sendCmd('pompe','ON')">🚿 Activer Pompe</button>
+      <button onclick="sendCmd('pompe','OFF')">🛑 Désactiver Pompe</button><br>
+      <button onclick="sendCmd('buzzer','ON')">🔔 Activer Buzzer</button>
+      <button onclick="sendCmd('buzzer','OFF')">🔕 Désactiver Buzzer</button><br>
+      <button onclick="logout()">Déconnexion</button>
+    </div>
   </div>
 
   <script>
-    const validUsername = "admin";
-    const validPassword = "esp32pass";
+    const validUsername = "amal hassine";
+    const validPassword = "amal123";
 
-    // Fonction de connexion
     function login() {
-      const user = document.getElementById("username").value;
-      const pass = document.getElementById("password").value;
+      const user = document.getElementById("username").value.trim();
+      const pass = document.getElementById("password").value.trim();
       if (user === validUsername && pass === validPassword) {
         document.getElementById("loginForm").classList.add("hidden");
         document.getElementById("controlPanel").classList.remove("hidden");
       } else {
-        document.getElementById("errorMsg").innerText = "Identifiants incorrects !";
+        document.getElementById("errorMsg").innerText = "❌ Identifiants incorrects";
       }
     }
 
-    // Fonction de déconnexion
     function logout() {
       document.getElementById("controlPanel").classList.add("hidden");
       document.getElementById("loginForm").classList.remove("hidden");
     }
 
-    // Fonction d'envoi de la commande à l'ESP32
     async function sendCmd(component, value) {
-      try {
-        const response = await fetch('https://esp32-api-verceltest.vercel.app/api/commandes', {  // URL de votre API Vercel
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ [component]: value })
-        });
-
-        if (!response.ok) {
-          throw new Error('Erreur dans la commande');
-        }
-
-        const result = await response.json();
-
-        // Vérifier si la réponse contient l'état de la commande
-        if (result && result.state) {
-          alert("✅ Commande envoyée avec succès : " + JSON.stringify(result.state));
-        } else {
-          alert("❌ Erreur : L'état de la commande est introuvable.");
-        }
-      } catch (error) {
-        alert("❌ Une erreur est survenue : " + error.message);
-      }
+      const response = await fetch('/api/commandes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [component]: value })
+      });
+      const result = await response.json();
+      alert("✅ Commande envoyée : " + JSON.stringify(result.state));
     }
   </script>
 </body>
